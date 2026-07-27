@@ -2,13 +2,10 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
-// Served from https://<user>.github.io/stip/ on GitHub Pages, but from the
-// domain root during local dev/preview.
-const base = process.env.GITHUB_PAGES ? '/stip/' : '/'
-
-// https://vite.dev/config/
+// Relative asset paths so the same build works no matter which subpath it's
+// served from (GitHub Pages, a raw-file CDN, or the domain root in dev).
 export default defineConfig({
-  base,
+  base: './',
   plugins: [
     react(),
     VitePWA({
