@@ -1,16 +1,26 @@
 import { useState } from 'react';
-import { MAX_PLAYERS, MIN_PLAYERS, TRUMP_SUIT, TRUMP_SYMBOL } from '../game/config';
+import {
+  AVATAR_OPTIONS,
+  BID_TIMER_OPTIONS,
+  DEFAULT_BID_TIMER_SECONDS,
+  MAX_PLAYERS,
+  MIN_PLAYERS,
+  TRUMP_SUIT,
+  TRUMP_SYMBOL,
+} from '../game/config';
 import { generateId } from '../game/id';
-import { totalRounds } from '../game/logic';
+import { computeRoundSchedule, leftoverCards, maxCardsForPlayers } from '../game/logic';
 import type { Player } from '../game/types';
+import { AvatarPicker } from './AvatarPicker';
 import { Stepper } from './Stepper';
 
 interface PlayerSetupProps {
   savedNames: string[] | null;
-  onStart: (players: Player[], firstDealerIndex: number) => void;
+  onStart: (players: Player[], firstDealerIndex: number, bidTimerSeconds: number) => void;
+  onViewHistory: () => void;
 }
 
-export function PlayerSetup({ savedNames, onStart }: PlayerSetupProps) {
+export function PlayerSetup({ savedNames, onStart, onViewHistory }: PlayerSetupProps) {
   const initialCount = savedNames?.length ?? 4;
   const [count, setCount] = useState(
     Math.min(MAX_PLAYERS, Math.max(MIN_PLAYERS, initialCount)),
@@ -19,10 +29,19 @@ export function PlayerSetup({ savedNames, onStart }: PlayerSetupProps) {
     const base = Array.from({ length: MAX_PLAYERS }, (_, i) => savedNames?.[i] ?? '');
     return base;
   });
+  const [avatars, setAvatars] = useState<string[]>(() =>
+    Array.from({ length: MAX_PLAYERS }, (_, i) => AVATAR_OPTIONS[i % AVATAR_OPTIONS.length]),
+  );
   const [firstDealerIndex, setFirstDealerIndex] = useState(0);
+  const [bidTimerEnabled, setBidTimerEnabled] = useState(false);
+  const [bidTimerSeconds, setBidTimerSeconds] = useState<number>(DEFAULT_BID_TIMER_SECONDS);
 
   const activeNames = names.slice(0, count);
   const canStart = activeNames.every((name) => name.trim().length > 0);
+
+  const maxCards = maxCardsForPlayers(count);
+  const totalRoundsPreview = computeRoundSchedule(count).length;
+  const leftover = leftoverCards(count);
 
   const updateName = (index: number, value: string) => {
     setNames((prev) => {
@@ -32,20 +51,39 @@ export function PlayerSetup({ savedNames, onStart }: PlayerSetupProps) {
     });
   };
 
+  const updateAvatar = (index: number, avatar: string) => {
+    setAvatars((prev) => {
+      const next = [...prev];
+      next[index] = avatar;
+      return next;
+    });
+  };
+
   const handleStart = () => {
     if (!canStart) return;
-    const players: Player[] = activeNames.map((name) => ({
+    const players: Player[] = activeNames.map((name, i) => ({
       id: generateId(),
       name: name.trim(),
+      avatar: avatars[i],
     }));
-    onStart(players, Math.min(firstDealerIndex, players.length - 1));
+    onStart(players, Math.min(firstDealerIndex, players.length - 1), bidTimerEnabled ? bidTimerSeconds : 0);
   };
 
   return (
     <div className="screen player-setup">
       <h1>Boerenbridge</h1>
+      <p className="suit-divider">
+        <span>♠</span>
+        <span className="suit-hearts">♥</span>
+        <span>♦</span>
+        <span>♣</span>
+      </p>
       <p className="subtitle">
-        Troef: {TRUMP_SUIT} {TRUMP_SYMBOL} &middot; {totalRounds()} rondes
+        Troef: {TRUMP_SUIT} {TRUMP_SYMBOL}
+      </p>
+      <p className="subtitle round-schedule-preview">
+        Max {maxCards} kaarten per ronde &middot; {totalRoundsPreview} rondes totaal
+        {leftover > 0 ? ` · ${leftover} kaart${leftover === 1 ? '' : 'en'} blijft/blijven ongebruikt` : ''}
       </p>
 
       <Stepper
@@ -58,16 +96,19 @@ export function PlayerSetup({ savedNames, onStart }: PlayerSetupProps) {
 
       <div className="player-name-list">
         {Array.from({ length: count }, (_, i) => (
-          <label key={i} className="player-name-field">
+          <div key={i} className="player-name-field">
             <span>Speler {i + 1}</span>
-            <input
-              type="text"
-              value={names[i] ?? ''}
-              onChange={(e) => updateName(i, e.target.value)}
-              placeholder={`Naam speler ${i + 1}`}
-              maxLength={20}
-            />
-          </label>
+            <div className="player-name-row">
+              <AvatarPicker value={avatars[i]} onChange={(a) => updateAvatar(i, a)} />
+              <input
+                type="text"
+                value={names[i] ?? ''}
+                onChange={(e) => updateName(i, e.target.value)}
+                placeholder={`Naam speler ${i + 1}`}
+                maxLength={20}
+              />
+            </div>
+          </div>
         ))}
       </div>
 
@@ -87,6 +128,31 @@ export function PlayerSetup({ savedNames, onStart }: PlayerSetupProps) {
         </label>
       )}
 
+      <div className="bid-timer-setting">
+        <label className="bid-timer-toggle">
+          <input
+            type="checkbox"
+            checked={bidTimerEnabled}
+            onChange={(e) => setBidTimerEnabled(e.target.checked)}
+          />
+          <span>Biedtimer inschakelen (optioneel)</span>
+        </label>
+        {bidTimerEnabled && (
+          <div className="bid-timer-options">
+            {BID_TIMER_OPTIONS.map((sec) => (
+              <button
+                key={sec}
+                type="button"
+                className={`bid-timer-option ${bidTimerSeconds === sec ? 'selected' : ''}`}
+                onClick={() => setBidTimerSeconds(sec)}
+              >
+                {sec}s
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
       <button
         type="button"
         className="primary-btn"
@@ -94,6 +160,10 @@ export function PlayerSetup({ savedNames, onStart }: PlayerSetupProps) {
         onClick={handleStart}
       >
         Start spel
+      </button>
+
+      <button type="button" className="link-btn" onClick={onViewHistory}>
+        Bekijk all-time klassement
       </button>
     </div>
   );

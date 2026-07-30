@@ -1,6 +1,7 @@
 import { seriesColor } from '../game/colors';
-import { rankedStandings, totalRounds } from '../game/logic';
+import { rankDeltas, rankedStandings, totalRounds } from '../game/logic';
 import type { GameState } from '../game/types';
+import { RankArrow } from './RankArrow';
 import { ScoreChart } from './ScoreChart';
 
 interface StandingsProps {
@@ -11,6 +12,7 @@ interface StandingsProps {
 export function Standings({ state, onClose }: StandingsProps) {
   const standings = rankedStandings(state);
   const playerIndexById = new Map(state.players.map((p, i) => [p.id, i]));
+  const deltas = rankDeltas(state);
 
   return (
     <div className="screen">
@@ -19,7 +21,7 @@ export function Standings({ state, onClose }: StandingsProps) {
       </button>
       <h2>Tussenstand</h2>
       <p className="subtitle">
-        Na ronde {state.currentRoundIndex} van {totalRounds()}
+        Na ronde {state.currentRoundIndex} van {totalRounds(state)}
       </p>
 
       <ScoreChart state={state} />
@@ -41,7 +43,8 @@ export function Standings({ state, onClose }: StandingsProps) {
                   className="series-dot"
                   style={{ background: seriesColor(playerIndexById.get(player.id) ?? 0) }}
                 />
-                {player.name}
+                {player.avatar} {player.name}
+                <RankArrow delta={deltas.get(player.id) ?? 0} />
               </td>
               <td>{total}</td>
             </tr>

@@ -8,19 +8,22 @@ import {
   totalRounds,
 } from '../game/logic';
 import type { GameState, Player, RoundEntries } from '../game/types';
+import { BidTimer } from './BidTimer';
 import { Stepper } from './Stepper';
 
 interface RoundScreenProps {
   state: GameState;
   onSubmitRound: (entries: RoundEntries) => void;
   onShowStandings: () => void;
+  onShowHistory: () => void;
 }
 
-export function RoundScreen({ state, onSubmitRound, onShowStandings }: RoundScreenProps) {
+export function RoundScreen({ state, onSubmitRound, onShowStandings, onShowHistory }: RoundScreenProps) {
   const { currentRoundIndex, players, firstDealerIndex } = state;
-  const cards = cardsInRound(currentRoundIndex);
+  const cards = cardsInRound(state, currentRoundIndex);
   const dealer = dealerForRound(players, currentRoundIndex, firstDealerIndex);
   const order = biddingOrder(players, currentRoundIndex, firstDealerIndex);
+  const totalR = totalRounds(state);
 
   const existing = state.rounds[currentRoundIndex];
   const [entries, setEntries] = useState<RoundEntries>(() => buildInitialEntries(players, existing));
@@ -43,11 +46,16 @@ export function RoundScreen({ state, onSubmitRound, onShowStandings }: RoundScre
   return (
     <div className="screen round-screen">
       <div className="round-header">
-        <button type="button" className="link-btn" onClick={onShowStandings}>
-          Tussenstand
-        </button>
+        <div className="round-header-links">
+          <button type="button" className="link-btn" onClick={onShowStandings}>
+            Tussenstand
+          </button>
+          <button type="button" className="link-btn" onClick={onShowHistory}>
+            Eerdere rondes
+          </button>
+        </div>
         <h2>
-          Ronde {currentRoundIndex + 1} van {totalRounds()} — {cards}{' '}
+          Ronde {currentRoundIndex + 1} van {totalR} — {cards}{' '}
           {cards === 1 ? 'kaart' : 'kaarten'}
         </h2>
         <p className="round-meta">
@@ -58,9 +66,15 @@ export function RoundScreen({ state, onSubmitRound, onShowStandings }: RoundScre
         </p>
       </div>
 
+      {!!state.bidTimerSeconds && (
+        <BidTimer order={order} seconds={state.bidTimerSeconds} roundKey={currentRoundIndex} />
+      )}
+
       <ol className="player-order-list">
         {order.map((player) => (
-          <li key={player.id}>{player.name}</li>
+          <li key={player.id}>
+            {player.avatar} {player.name}
+          </li>
         ))}
       </ol>
 
@@ -88,7 +102,7 @@ export function RoundScreen({ state, onSubmitRound, onShowStandings }: RoundScre
         className="primary-btn"
         onClick={() => onSubmitRound(entries)}
       >
-        {currentRoundIndex === totalRounds() - 1 ? 'Spel afronden' : 'Volgende ronde'}
+        {currentRoundIndex === totalR - 1 ? 'Spel afronden' : 'Volgende ronde'}
       </button>
     </div>
   );
@@ -114,7 +128,9 @@ function PlayerRoundForm({ player, cards, entry, onChange }: PlayerRoundFormProp
   return (
     <div className="player-round-form">
       <div className="player-round-form-header">
-        <span className="player-name">{player.name}</span>
+        <span className="player-name">
+          {player.avatar} {player.name}
+        </span>
         <span className={`points-preview ${points >= 0 ? 'positive' : 'negative'}`}>
           {points >= 0 ? '+' : ''}
           {points} pt
