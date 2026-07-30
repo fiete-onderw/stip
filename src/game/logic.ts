@@ -11,19 +11,14 @@ export function leftoverCards(playerCount: number): number {
   return DECK_SIZE % playerCount;
 }
 
-// Rondeschema: loopt op van 1 kaart naar het maximum, en weer af naar 1
-// kaart. Deelt het kaartspel precies op (geen rest, bijv. 4 spelers): de
-// piek komt maar één keer voor (2*max - 1 rondes). Blijven er kaarten over
-// (bijv. 5 spelers, 52/5 = 10,4): de piekronde wordt dan twee keer
-// gespeeld, terug naar beneden (2*max rondes) — zo bij 4 spelers 25 rondes
-// en bij 5 spelers 20 rondes.
+// Rondeschema: loopt op van 1 kaart naar het maximum, speelt de piekronde
+// twee keer achter elkaar, en loopt dan weer af naar 1 kaart. Totaal dus
+// altijd 2*max rondes (bijv. 4 spelers: max 13 → 26 rondes; 5 spelers:
+// max 10 → 20 rondes).
 export function computeRoundSchedule(playerCount: number): number[] {
   const max = maxCardsForPlayers(playerCount);
-  const exact = leftoverCards(playerCount) === 0;
   const up = Array.from({ length: max }, (_, i) => i + 1); // 1..max
-  const downLength = exact ? max - 1 : max;
-  const downStart = exact ? max - 1 : max;
-  const down = Array.from({ length: downLength }, (_, i) => downStart - i);
+  const down = Array.from({ length: max }, (_, i) => max - i); // max..1
   return [...up, ...down];
 }
 
