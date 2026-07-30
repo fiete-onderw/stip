@@ -11,15 +11,17 @@ export function leftoverCards(playerCount: number): number {
   return DECK_SIZE % playerCount;
 }
 
-// Rondeschema: loopt op van 1 kaart naar het maximum, speelt de piekronde
-// twee keer achter elkaar, en loopt dan weer af naar 1 kaart. Totaal dus
-// altijd 2*max rondes (bijv. 4 spelers: max 13 → 26 rondes; 5 spelers:
-// max 10 → 20 rondes).
+// Rondeschema: begint bij het maximum en loopt af naar 1 kaart, speelt die
+// laatste ronde van 1 kaart twee keer achter elkaar, en loopt dan weer op
+// naar het maximum. Zelfde structuur als de oorspronkelijke vaste
+// huisregel (10,9,...,2,1,1,2,...,9,10), nu met een dynamisch maximum.
+// Totaal altijd 2*max rondes (bijv. 4 spelers: max 13 → 26 rondes; 5
+// spelers: max 10 → 20 rondes).
 export function computeRoundSchedule(playerCount: number): number[] {
   const max = maxCardsForPlayers(playerCount);
-  const up = Array.from({ length: max }, (_, i) => i + 1); // 1..max
   const down = Array.from({ length: max }, (_, i) => max - i); // max..1
-  return [...up, ...down];
+  const up = Array.from({ length: max }, (_, i) => i + 1); // 1..max
+  return [...down, ...up];
 }
 
 export function totalRounds(state: GameState): number {
